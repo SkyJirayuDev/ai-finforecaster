@@ -4,13 +4,14 @@ import { useState } from "react";
 import Papa from "papaparse";
 import { FaFileAlt, FaUpload, FaChartLine } from "react-icons/fa";
 
-const allowedCategories = ["sales", "rent", "salary", "tax", "misc"];
+const predefinedCategories = ["sales", "rent", "salary", "tax", "misc", "investment", "utilities", "maintenance"];
 
 export interface CSVRow {
   date: string;
   amount: number;
   description?: string;
   category?: string;
+  customCategory?: boolean;
   id?: number;
   [key: string]: any;
 }
@@ -34,28 +35,29 @@ function validateRows(rows: any[]): ValidationResult {
     ) {
       errors.push("Invalid or missing date (YYYY-MM-DD)");
     }
+
     if (!row.amount || isNaN(parseFloat(row.amount))) {
       errors.push("Invalid or missing amount");
     }
+
+    if (row.description && !/^[\x00-\x7F\s]+$/.test(row.description)) {
+      errors.push("Description must be in English only");
+    }
+
     if (row.description && row.description.length > 120) {
       errors.push("Description too long (max 120 chars)");
     }
-    if (
-      row.category &&
-      !allowedCategories.includes(row.category.toLowerCase())
-    ) {
-      errors.push(`Invalid category: ${row.category}`);
-    }
-    if (row.id && (!Number.isInteger(Number(row.id)) || Number(row.id) <= 0)) {
-      errors.push("ID must be a positive integer");
-    }
+
+    const category = row.category?.trim().toLowerCase() || "uncategorized";
+    const isCustom = !predefinedCategories.includes(category);
 
     if (errors.length === 0) {
       validRows.push({
         date: row.date,
         amount: parseFloat(row.amount),
         description: row.description || "",
-        category: row.category?.toLowerCase() || undefined,
+        category,
+        customCategory: isCustom,
         id: row.id ? parseInt(row.id) : undefined,
       });
     } else {
@@ -74,9 +76,7 @@ export default function CSVUploader({
   setForecastResult: React.Dispatch<React.SetStateAction<any[] | null>>;
 }) {
   const [validRows, setValidRows] = useState<CSVRow[]>([]);
-  const [invalidRows, setInvalidRows] = useState<ValidationResult["invalidRows"]>(
-    []
-  );
+  const [invalidRows, setInvalidRows] = useState<ValidationResult["invalidRows"]>([]);
   const [fileName, setFileName] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -161,12 +161,13 @@ export default function CSVUploader({
           {loading ? "Generating..." : "Generate Forecast"}
         </button>
 
+        {/* 🔍 Valid & Invalid Rows Preview */}
         {validRows.length > 0 && (
           <div>
             <h4 className="text-sm font-semibold mb-1 text-green-700">
               ✅ Valid Rows ({validRows.length})
             </h4>
-            <pre className="text-xs bg-green-50 p-3 rounded max-h-40 overflow-y-auto whitespace-pre-wrap">
+            <pre className=" text-green-700 text-xs bg-green-50 p-3 rounded max-h-40 overflow-y-auto whitespace-pre-wrap">
               {JSON.stringify(validRows.slice(0, 5), null, 2)}
             </pre>
           </div>
@@ -191,7 +192,7 @@ export default function CSVUploader({
         {forecastResult && (
           <div className="mt-4">
             <h4 className="text-sm font-semibold mb-1 text-blue-700">
-              📈 Forecast Result (next 30 days)
+              📈 Forecast Result (next 3 months)
             </h4>
             <pre className="text-xs bg-blue-50 p-3 rounded max-h-60 overflow-y-auto whitespace-pre-wrap">
               {JSON.stringify(forecastResult.slice(0, 5), null, 2)}
