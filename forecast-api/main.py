@@ -9,7 +9,6 @@ import logging
 
 app = FastAPI()
 
-# เปิด CORS สำหรับ React frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -21,102 +20,90 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- Schema ---
 class ForecastInput(BaseModel):
-    date: str       # YYYY-MM-DD
+    date: str
     amount: float
     description: Optional[str] = None
-    category: Optional[str]    = None
+    category: Optional[str] = None
 
 class ForecastOutput(BaseModel):
     ds: str
     yhat: float
     yhat_upper: Optional[float] = None
     yhat_lower: Optional[float] = None
-    actual: Optional[float]      = None
+    actual: Optional[float] = None
 
-# --- MAPE ---
 def mape(a: np.ndarray, p: np.ndarray) -> float:
     return np.mean(np.abs((a - p) / a)) * 100
 
 @app.post("/forecast", response_model=List[ForecastOutput])
 async def forecast(data: List[ForecastInput]):
-    # 1) อ่าน payload ลง DataFrame
     df = pd.DataFrame([{"ds": tx.date, "y": tx.amount} for tx in data])
     df["ds"] = pd.to_datetime(df["ds"])
     df = df.sort_values("ds")
 
-    # 2) สรุปยอดรายเดือน
+    # ✅ Aggregate รายเดือน
     df_m = df.set_index("ds")["y"].resample("MS").sum().reset_index()
     if len(df_m) < 6:
         raise HTTPException(400, "ต้องมีข้อมูลขั้นต่ำ 6 เดือนขึ้นไป")
 
-    # 3) ตั้งค่าขอบบนสำหรับ logistic growth (cap) = 1.2 * max_historical
-    max_hist = df_m["y"].max()
-    df_m["cap"] = max_hist * 1.2
+    # ✅ ตั้งค่า floor และ cap
+    floor_val = 5000
+    cap_val = df_m["y"].max() * 1.2
+    df_m["floor"] = floor_val
+    df_m["cap"] = cap_val
 
-    # 4) สร้างสมการ logistic growth
-    #    Prophet ต้องการ col ชื่อ 'cap' อยู่ใน df เมื่อใช้ growth='logistic'
-    #    floor เราไม่กำหนด (null => 0)
-    # 5) แบ่ง train/test
-    split = int(len(df_m) * 0.8)
-    train = df_m.iloc[:split].copy()
-    test  = df_m.iloc[split:].copy()
-
-    # 6) สร้างโมเดล Prophet
+    # ✅ โมเดล Prophet แบบ logistic + custom seasonality
     m = Prophet(
-        growth="logistic",            # logistic growth (จำกัด cap)
+        growth="logistic",
+        seasonality_mode="multiplicative",
+        changepoint_prior_scale=0.1,
+        seasonality_prior_scale=4.0,
+        interval_width=0.8,
         yearly_seasonality=True,
         weekly_seasonality=False,
-        daily_seasonality=False,
-        seasonality_mode="additive",
-        changepoint_prior_scale=0.05, # ปรับ sensitivity ของ trend
-        interval_width=0.80,          # CI
+        daily_seasonality=False
     )
+    m.add_seasonality("monthly", period=30.5, fourier_order=5)
+    m.add_seasonality("quarterly", period=91.25, fourier_order=3)
 
-    # 7) เพิ่ม monthly seasonality แบบเบาๆ
-    m.add_seasonality(name="monthly", period=30.5, fourier_order=3)
+    m.fit(df_m)
 
-    # 8) fit โมเดล
-    m.fit(train.rename(columns={"y":"y", "cap":"cap"}))
+    # ✅ สร้าง future frame และใส่ floor/cap
+    future = m.make_future_dataframe(periods=3, freq="MS")
+    future["floor"] = floor_val
+    future["cap"] = cap_val
 
-    # 9) สร้าง future frame
-    #    forecast horizon = test + 3 เดือนข้างหน้า
-    periods = len(test) + 3
-    future = m.make_future_dataframe(periods=periods, freq="MS")
-    future["cap"] = max_hist * 1.2
-
-    # 10) predict
     fc = m.predict(future)
 
-    # 11) merge actual จาก df_m
+    # ✅ Map actual
     actual_map = df_m.set_index("ds")["y"].to_dict()
     fc["actual"] = fc["ds"].map(actual_map)
 
-    # 12) ตัด yhat ให้อยู่ในช่วง [0, cap]
-    fc["yhat"]       = np.clip(fc["yhat"], 0, max_hist * 1.2)
-    fc["yhat_upper"] = np.clip(fc["yhat_upper"], 0, max_hist * 1.2)
-    fc["yhat_lower"] = np.clip(fc["yhat_lower"], 0, max_hist * 1.2)
+    # ✅ Clip ไม่ให้ติดลบ
+    fc["yhat"] = np.clip(fc["yhat"], 0, cap_val)
+    fc["yhat_lower"] = np.clip(fc["yhat_lower"], 0, cap_val)
+    fc["yhat_upper"] = np.clip(fc["yhat_upper"], 0, cap_val)
 
-    # 13) คำนวณ MAPE บนช่วง historical
+    # ✅ Logging MAPE + CI coverage
     hist = fc[fc["actual"].notna()]
     if not hist.empty:
         err = mape(hist["actual"].values, hist["yhat"].values)
-        logger.info(f"Historical MAPE = {err:.2f}%")
+        coverage = ((hist["actual"] >= hist["yhat_lower"]) & (hist["actual"] <= hist["yhat_upper"])).mean()
+        logger.info(f"Historical MAPE = {err:.2f}% | CI Coverage = {coverage*100:.1f}%")
 
-    # 14) สร้างผลลัพธ์
     out: List[ForecastOutput] = []
     for _, r in fc.iterrows():
         out.append(ForecastOutput(
-            ds         = r["ds"].strftime("%Y-%m-%d"),
-            yhat       = round(float(r["yhat"]), 2),
-            yhat_upper = round(float(r["yhat_upper"]), 2),
-            yhat_lower = round(float(r["yhat_lower"]), 2),
-            actual     = round(float(r["actual"]), 2) if pd.notna(r["actual"]) else None
+            ds=r["ds"].strftime("%Y-%m-%d"),
+            yhat=round(float(r["yhat"]), 2),
+            yhat_upper=round(float(r["yhat_upper"]), 2),
+            yhat_lower=round(float(r["yhat_lower"]), 2),
+            actual=round(float(r["actual"]), 2) if pd.notna(r["actual"]) else None
         ))
 
     return out
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "message": "AI-FinForecaster backend is live"}
+    return {"status": "ok", "message": "AI-FinForecaster backend v2 is live"}
