@@ -4,11 +4,21 @@ import { FaUser, FaCog, FaUpload, FaChartLine, FaDownload, FaRobot, FaArrowUp, F
 import { useState } from "react";
 import CSVUploader from "@/components/CSVUploader";
 import ForecastChart from "@/components/ForecastChart";
+import PortfolioOverview from "@/components/PortfolioOverview";
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [forecastResult, setForecastResult] = useState<any[] | null>(null);
-
+  const [validRows, setValidRows] = useState<any[]>([]);
+  
+  const totalValue = validRows.reduce((sum, row) => sum + row.amount, 0) / 1000;
+  const currentYear = new Date().getFullYear();
+  const thisYearRows = validRows.filter(r => new Date(r.date).getFullYear() === currentYear);
+  const lastYearRows = validRows.filter(r => new Date(r.date).getFullYear() === currentYear - 1);
+  const thisYearTotal = thisYearRows.reduce((sum, row) => sum + row.amount, 0);
+  const lastYearTotal = lastYearRows.reduce((sum, row) => sum + row.amount, 0);
+  const growthRate = lastYearTotal > 0 ? ((thisYearTotal - lastYearTotal) / lastYearTotal) * 100 : 0;
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex flex-col">
       {/* Top Navigation */}
@@ -63,26 +73,11 @@ export default function Home() {
           flex flex-col gap-4 p-4 lg:p-0 lg:pr-6 lg:pl-4
           overflow-y-auto
         `}>
-          {/* Quick Stats */}
-          <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-4 lg:p-6 shadow-xl border border-white/20">
-            <h3 className="text-base lg:text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <FaChartLine className="text-blue-600" />
-              Portfolio Overview
-            </h3>
-            <div className="grid grid-cols-2 gap-3 lg:gap-4">
-              <div className="text-center p-2 lg:p-3 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl">
-                <div className="text-lg lg:text-2xl font-bold text-blue-700">$127.5K</div>
-                <div className="text-xs text-blue-600 font-medium">Total Value</div>
-              </div>
-              <div className="text-center p-2 lg:p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl">
-                <div className="text-lg lg:text-2xl font-bold text-green-700">+12.3%</div>
-                <div className="text-xs text-green-600 font-medium">YTD Growth</div>
-              </div>
-            </div>
-          </div>
+          {/* Portfolio Overview */}
+          <PortfolioOverview validRows={validRows} />
 
           {/* Data Management */}
-          <CSVUploader setForecastResult={setForecastResult} forecastResult={forecastResult} />
+          <CSVUploader setForecastResult={setForecastResult} forecastResult={forecastResult} setValidRowsGlobal={setValidRows} />
 
           {/* Security & Compliance */}
           <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-4 lg:p-6 shadow-xl border border-white/20">

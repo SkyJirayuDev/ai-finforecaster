@@ -4,7 +4,16 @@ import { useState } from "react";
 import Papa from "papaparse";
 import { FaFileAlt, FaUpload, FaChartLine } from "react-icons/fa";
 
-const predefinedCategories = ["sales", "rent", "salary", "tax", "misc", "investment", "utilities", "maintenance"];
+const predefinedCategories = [
+  "sales",
+  "rent",
+  "salary",
+  "tax",
+  "misc",
+  "investment",
+  "utilities",
+  "maintenance",
+];
 
 export interface CSVRow {
   date: string;
@@ -71,12 +80,16 @@ function validateRows(rows: any[]): ValidationResult {
 export default function CSVUploader({
   forecastResult,
   setForecastResult,
+  setValidRowsGlobal,
 }: {
   forecastResult: any[] | null;
   setForecastResult: React.Dispatch<React.SetStateAction<any[] | null>>;
+  setValidRowsGlobal?: React.Dispatch<React.SetStateAction<CSVRow[]>>;
 }) {
   const [validRows, setValidRows] = useState<CSVRow[]>([]);
-  const [invalidRows, setInvalidRows] = useState<ValidationResult["invalidRows"]>([]);
+  const [invalidRows, setInvalidRows] = useState<
+    ValidationResult["invalidRows"]
+  >([]);
   const [fileName, setFileName] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -95,6 +108,7 @@ export default function CSVUploader({
         setValidRows(validRows);
         setInvalidRows(invalidRows);
         setForecastResult(null);
+        setValidRowsGlobal?.(validRows);
         setError("");
       },
     });
@@ -161,7 +175,6 @@ export default function CSVUploader({
           {loading ? "Generating..." : "Generate Forecast"}
         </button>
 
-        {/* 🔍 Valid & Invalid Rows Preview */}
         {validRows.length > 0 && (
           <div>
             <h4 className="text-sm font-semibold mb-1 text-green-700">
