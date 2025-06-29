@@ -38,19 +38,21 @@ interface ForecastPoint {
 
 interface ForecastChartProps {
   forecastResult?: ForecastPoint[] | null;
+  confidenceLevel?: number;
 }
 
-export default function ForecastChart({ forecastResult }: ForecastChartProps) {
+export default function ForecastChart({
+  forecastResult,
+  confidenceLevel,
+}: ForecastChartProps) {
   const { chartData, stats } = useMemo(() => {
     if (!forecastResult || forecastResult.length === 0)
       return { chartData: null, stats: null };
 
-    // แยกข้อมูล actual กับ forecast
     const actualData = forecastResult.filter((pt) => pt.actual !== null);
     const forecastData = forecastResult.filter((pt) => pt.actual === null);
     const allData = [...actualData, ...forecastData];
 
-    // คำนวณสถิติ
     const actualValues = actualData.map((pt) => pt.actual!);
     const forecastValues = forecastData.map((pt) => pt.yhat);
 
@@ -98,7 +100,7 @@ export default function ForecastChart({ forecastResult }: ForecastChartProps) {
           pointBorderColor: "#ffffff",
           pointBorderWidth: 2,
           pointRadius: 4,
-          borderDash: [5, 5], // เส้นประ
+          borderDash: [5, 5],
           fill: false,
           tension: 0.2,
         },
@@ -108,7 +110,7 @@ export default function ForecastChart({ forecastResult }: ForecastChartProps) {
           borderColor: "rgba(16,185,129,0.3)",
           backgroundColor: "rgba(16,185,129,0.1)",
           pointRadius: 0,
-          fill: "+1", // Fill to next dataset
+          fill: "+1",
           tension: 0.2,
         },
         {
@@ -301,7 +303,10 @@ export default function ForecastChart({ forecastResult }: ForecastChartProps) {
               {stats.forecastCount} forecast
             </span>
             <span>🤖 Model: Facebook Prophet with seasonality detection</span>
-            <span>📈 Confidence Level: 80%</span>
+            <span>
+              📈 Confidence Level:{" "}
+              {confidenceLevel ? confidenceLevel.toFixed(0) : "80"}%
+            </span>
           </div>
         </div>
       )}

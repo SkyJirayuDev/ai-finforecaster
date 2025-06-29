@@ -81,10 +81,14 @@ export default function CSVUploader({
   forecastResult,
   setForecastResult,
   setValidRowsGlobal,
+  confidenceLevel,
+  setConfidenceLevel,
 }: {
   forecastResult: any[] | null;
   setForecastResult: React.Dispatch<React.SetStateAction<any[] | null>>;
   setValidRowsGlobal?: React.Dispatch<React.SetStateAction<CSVRow[]>>;
+  confidenceLevel?: number; // 60–95
+  setConfidenceLevel?: React.Dispatch<React.SetStateAction<number>>;
 }) {
   const [validRows, setValidRows] = useState<CSVRow[]>([]);
   const [invalidRows, setInvalidRows] = useState<
@@ -123,9 +127,10 @@ export default function CSVUploader({
       const response = await fetch("http://localhost:8000/forecast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          validRows.map(({ date, amount }) => ({ date, amount }))
-        ),
+        body: JSON.stringify({
+          data: validRows.map(({ date, amount }) => ({ date, amount })),
+          confidenceLevel: (confidenceLevel ?? 80) / 100,
+        }),
       });
 
       if (!response.ok) {
@@ -166,6 +171,35 @@ export default function CSVUploader({
           />
         </label>
 
+        {/* ✅ Confidence Level Slider */}
+        {confidenceLevel !== undefined && setConfidenceLevel && (
+          <div className="text-sm font-medium text-gray-700 space-y-1">
+            <label
+              htmlFor="confidence"
+              className="flex items-center justify-between"
+            >
+              <span>Confidence Level</span>
+              <span className="text-blue-600 font-semibold">
+                {confidenceLevel}%{" "}
+                <span className="text-gray-400">(recommended)</span>
+              </span>
+            </label>
+            <input
+              type="range"
+              id="confidence"
+              min={60}
+              max={95}
+              step={5}
+              value={confidenceLevel}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val)) setConfidenceLevel(val);
+              }}
+              className="w-full accent-blue-500"
+            />
+          </div>
+        )}
+
         <button
           onClick={handleForecast}
           disabled={validRows.length === 0 || loading}
@@ -194,7 +228,9 @@ export default function CSVUploader({
             <div className="text-xs bg-red-50 p-3 rounded max-h-40 overflow-y-auto whitespace-pre-wrap space-y-2">
               {invalidRows.slice(0, 5).map((r, i) => (
                 <div key={i}>
-                  <div className="font-medium text-red-800">Row #{r.index + 1}:</div>
+                  <div className="font-medium text-red-800">
+                    Row #{r.index + 1}:
+                  </div>
                   <div className="text-red-700">{r.errors.join(", ")}</div>
                 </div>
               ))}
