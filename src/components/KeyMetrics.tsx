@@ -4,35 +4,46 @@ import { FaArrowUp, FaArrowDown, FaMinus } from "react-icons/fa";
 
 interface KeyMetricsProps {
   forecastAccuracy?: number;
-  confidenceLevel?: number;
+  confidenceLevel?: string;
   riskLevel?: "Low" | "Moderate" | "High";
   trendLabel?: "Bullish" | "Neutral" | "Bearish";
 }
 
 export default function KeyMetrics({
   forecastAccuracy = 0,
-  confidenceLevel = 80,
+  confidenceLevel = "Moderate",
   riskLevel = "Moderate",
   trendLabel = "Neutral",
 }: KeyMetricsProps) {
   const getTrendIcon = () => {
     if (trendLabel === "Bullish")
-      return <FaArrowUp size={10} className="text-green-600" />;
+      return (
+        <FaArrowUp size={10} className="text-green-500 dark:text-green-400" />
+      );
     if (trendLabel === "Bearish")
-      return <FaArrowDown size={10} className="text-red-600" />;
-    return <FaMinus size={10} className="text-gray-400" />;
+      return (
+        <FaArrowDown size={10} className="text-rose-500 dark:text-rose-400" />
+      );
+    return <FaMinus size={10} className="text-gray-400 dark:text-gray-300" />;
   };
 
   const getTrendColor = () => {
-    if (trendLabel === "Bullish") return "text-green-600";
-    if (trendLabel === "Bearish") return "text-red-600";
-    return "text-gray-500";
+    if (trendLabel === "Bullish") return "text-green-600 dark:text-green-300";
+    if (trendLabel === "Bearish") return "text-rose-600 dark:text-rose-400";
+    return "text-gray-600 dark:text-gray-300";
   };
 
   const getRiskColor = () => {
-    if (riskLevel === "Low") return "text-green-600";
-    if (riskLevel === "High") return "text-red-600";
-    return "text-amber-600";
+    if (riskLevel === "Low") return "text-emerald-600 dark:text-emerald-400";
+    if (riskLevel === "High") return "text-rose-600 dark:text-rose-400";
+    return "text-blue-600 dark:text-blue-400";
+  };
+
+  const getConfidenceColor = () => {
+    const level = confidenceLevel?.toLowerCase();
+    if (level.startsWith("high")) return "text-green-600 dark:text-green-400";
+    if (level.startsWith("low")) return "text-red-600 dark:text-red-400";
+    return "text-blue-600 dark:text-blue-400";
   };
 
   return (
@@ -64,7 +75,9 @@ export default function KeyMetrics({
           <span className="text-gray-600 text-xs lg:text-sm">
             Risk Assessment
           </span>
-          <span className={`text-xs lg:text-sm font-semibold ${getRiskColor()}`}>
+          <span
+            className={`text-xs lg:text-sm font-semibold ${getRiskColor()}`}
+          >
             {riskLevel}
           </span>
         </div>
@@ -74,16 +87,19 @@ export default function KeyMetrics({
           <span className="text-gray-600 text-xs lg:text-sm">
             Confidence Level
           </span>
-          <span className="text-xs lg:text-sm font-semibold text-blue-600">
-            {confidenceLevel.toFixed(1)}%
+          <span className="text-xs lg:text-sm font-semibold">
+            <span className={`${getConfidenceColor()}`}>
+              {confidenceLevel?.split(" ")[0]}
+            </span>{" "}
+            <span className="text-gray-400">
+              {confidenceLevel?.match(/\(\d+%.*\)/)?.[0]}
+            </span>
           </span>
         </div>
 
         {/* Market Trend */}
         <div className="flex justify-between items-center">
-          <span className="text-gray-600 text-xs lg:text-sm">
-            Market Trend
-          </span>
+          <span className="text-gray-600 text-xs lg:text-sm">Market Trend</span>
           <span
             className={`flex items-center gap-1 text-xs lg:text-sm font-semibold ${getTrendColor()}`}
           >

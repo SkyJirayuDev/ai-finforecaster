@@ -19,11 +19,19 @@ import { useState } from "react";
 import CSVUploader from "@/components/CSVUploader";
 import ForecastChart from "@/components/ForecastChart";
 import PortfolioOverview from "@/components/PortfolioOverview";
+import KeyMetrics from "@/components/KeyMetrics";
+import {
+  calculateForecastAccuracy,
+  calculateRiskAssessment,
+  calculateMarketTrend,
+  getConfidenceLabel,
+} from "@/lib/forecastMetrics";
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [forecastResult, setForecastResult] = useState<any[] | null>(null);
   const [validRows, setValidRows] = useState<any[]>([]);
+  const [confidenceLevel, setConfidenceLevel] = useState<number>(80);
 
   const totalValue = validRows.reduce((sum, row) => sum + row.amount, 0) / 1000;
   const currentYear = new Date().getFullYear();
@@ -39,7 +47,6 @@ export default function Home() {
     lastYearTotal > 0
       ? ((thisYearTotal - lastYearTotal) / lastYearTotal) * 100
       : 0;
-  const [confidenceLevel, setConfidenceLevel] = useState<number>(80);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex flex-col">
@@ -154,51 +161,24 @@ export default function Home() {
           {/* Bottom Analytics Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
             {/* Key Metrics */}
-            <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-4 lg:p-6 shadow-xl border border-white/20">
-              <h3 className="text-base lg:text-lg font-semibold text-gray-800 mb-4">
-                Key Metrics
-              </h3>
-              <div className="space-y-3 lg:space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 text-xs lg:text-sm">
-                    Forecast Accuracy
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-12 lg:w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div className="w-[94%] h-full bg-gradient-to-r from-green-500 to-emerald-500"></div>
-                    </div>
-                    <span className="text-xs lg:text-sm font-semibold text-gray-800">
-                      94.2%
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 text-xs lg:text-sm">
-                    Risk Assessment
-                  </span>
-                  <span className="text-xs lg:text-sm font-semibold text-amber-600">
-                    Moderate
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 text-xs lg:text-sm">
-                    Confidence Level
-                  </span>
-                  <span className="text-xs lg:text-sm font-semibold text-blue-600">
-                    87.5%
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 text-xs lg:text-sm">
-                    Market Trend
-                  </span>
-                  <span className="flex items-center gap-1 text-xs lg:text-sm font-semibold text-green-600">
-                    <FaArrowUp size={10} className="lg:w-3 lg:h-3" />
-                    Bullish
-                  </span>
-                </div>
-              </div>
-            </div>
+            <KeyMetrics
+              forecastAccuracy={
+                forecastResult && forecastResult.length > 0
+                  ? calculateForecastAccuracy(forecastResult)
+                  : 0
+              }
+              confidenceLevel={getConfidenceLabel(confidenceLevel)}
+              riskLevel={
+                forecastResult && forecastResult.length > 0
+                  ? calculateRiskAssessment(forecastResult)
+                  : "Moderate"
+              }
+              trendLabel={
+                forecastResult && forecastResult.length > 0
+                  ? calculateMarketTrend(forecastResult)
+                  : "Neutral"
+              }
+            />
 
             {/* AI Insights */}
             <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-4 lg:p-6 shadow-xl border border-white/20">
