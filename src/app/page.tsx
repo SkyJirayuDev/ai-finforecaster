@@ -110,6 +110,7 @@ export default function Home() {
           <CSVUploader
             forecastResult={forecastResult}
             setForecastResult={setForecastResult}
+            setValidRowsGlobal={setValidRows}
             confidenceLevel={confidenceLevel}
             setConfidenceLevel={setConfidenceLevel}
           />
