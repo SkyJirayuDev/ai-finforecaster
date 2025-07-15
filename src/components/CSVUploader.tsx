@@ -215,7 +215,7 @@ export default function CSVUploader({
               ✅ Valid Rows ({validRows.length})
             </h4>
             <pre className=" text-green-700 text-xs bg-green-50 p-3 rounded max-h-40 overflow-y-auto whitespace-pre-wrap">
-              {JSON.stringify(validRows.slice(0, 5), null, 2)}
+              {JSON.stringify(validRows.slice(0, 10), null, 2)}
             </pre>
           </div>
         )}
@@ -225,7 +225,7 @@ export default function CSVUploader({
             <h4 className="text-sm font-semibold mb-1 text-red-700">
               ❌ Invalid Rows ({invalidRows.length})
             </h4>
-            <div className="text-xs bg-red-50 p-3 rounded max-h-40 overflow-y-auto whitespace-pre-wrap space-y-2">
+            <div className="text-red-700 text-xs bg-red-50 p-3 rounded max-h-40 overflow-y-auto whitespace-pre-wrap space-y-2">
               {invalidRows.slice(0, 5).map((r, i) => (
                 <div key={i}>
                   <div className="font-medium text-red-800">
@@ -243,7 +243,7 @@ export default function CSVUploader({
             <h4 className="text-sm font-semibold mb-1 text-blue-700">
               📈 Forecast Result (next 3 months)
             </h4>
-            <pre className="text-xs bg-blue-50 p-3 rounded max-h-60 overflow-y-auto whitespace-pre-wrap">
+            <pre className="text-blue-700 text-xs bg-blue-50 p-3 rounded max-h-60 overflow-y-auto whitespace-pre-wrap">
               {JSON.stringify(forecastResult.slice(0, 5), null, 2)}
             </pre>
           </div>

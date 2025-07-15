@@ -14,23 +14,38 @@ export default function PortfolioOverview({
       return { totalValue: 0, growthRate: 0 };
     }
 
-    const totalValue = validRows.reduce((acc, row) => acc + row.amount, 0) / 1000;
+    const totalValue =
+      validRows.reduce((acc: number, row: CSVRow) => acc + row.amount, 0) / 1000;
 
-    const janRows = validRows.filter((row) =>
-      new Date(row.date).getMonth() === 0
-    );
-    const recentMonth = Math.max(
+    const recentTimestamp = Math.max(
       ...validRows.map((r) => new Date(r.date).getTime())
     );
-    const recentRows = validRows.filter(
-      (r) => new Date(r.date).getTime() === recentMonth
-    );
+    const recentDate = new Date(recentTimestamp);
+    const currentYear = recentDate.getFullYear();
+    const currentMonthIndex = recentDate.getMonth(); // 0 = ม.ค.
 
-    const janTotal = janRows.reduce((acc, r) => acc + r.amount, 0);
-    const recentTotal = recentRows.reduce((acc, r) => acc + r.amount, 0);
+    const currentYTD = validRows
+      .filter((r) => {
+        const d = new Date(r.date);
+        return (
+          d.getFullYear() === currentYear &&
+          d.getMonth() <= currentMonthIndex
+        );
+      })
+      .reduce((sum: number, r: CSVRow) => sum + r.amount, 0);
+
+    const lastYTD = validRows
+      .filter((r) => {
+        const d = new Date(r.date);
+        return (
+          d.getFullYear() === currentYear - 1 &&
+          d.getMonth() <= currentMonthIndex
+        );
+      })
+      .reduce((sum: number, r: CSVRow) => sum + r.amount, 0);
 
     const growthRate =
-      janTotal > 0 ? ((recentTotal - janTotal) / janTotal) * 100 : 0;
+      lastYTD > 0 ? ((currentYTD - lastYTD) / lastYTD) * 100 : 0;
 
     return { totalValue, growthRate };
   }, [validRows]);
@@ -46,8 +61,7 @@ export default function PortfolioOverview({
           <div className="text-lg lg:text-2xl font-bold text-blue-700">
             ${totalValue.toLocaleString(undefined, {
               maximumFractionDigits: 1,
-            })}
-            K
+            })}K
           </div>
           <div className="text-xs text-blue-600 font-medium">Total Value</div>
         </div>

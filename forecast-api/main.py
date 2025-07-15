@@ -84,7 +84,7 @@ async def forecast(req: ForecastRequest):
     m.fit(df_m)
 
     # Create future frame
-    future = m.make_future_dataframe(periods=3, freq="MS")
+    future = m.make_future_dataframe(periods=1, freq="MS")
     future["floor"] = floor_val
     future["cap"] = cap_val
 
