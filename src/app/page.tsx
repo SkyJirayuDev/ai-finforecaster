@@ -15,8 +15,8 @@ import {
   FaBars,
   FaTimes,
 } from "react-icons/fa";
-import { useState } from "react";
-import CSVUploader from "@/components/CSVUploader";
+import { useState, useEffect } from "react";
+import CSVUploader, { CSVRow } from "@/components/CSVUploader";
 import ForecastChart from "@/components/ForecastChart";
 import PortfolioOverview from "@/components/PortfolioOverview";
 import KeyMetrics from "@/components/KeyMetrics";
@@ -26,14 +26,25 @@ import {
   calculateMarketTrend,
   getConfidenceLabel,
 } from "@/lib/forecastMetrics";
+import { buildAdvicePayload } from "@/lib/adviceUtils";
+import AIInsights, { Advice } from "@/components/AIInsights";
 
 export default function Home() {
+  // Sidebar toggle
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // CSV and forecast data states
+  const [validRows, setValidRows] = useState<CSVRow[]>([]);
   const [forecastResult, setForecastResult] = useState<any[] | null>(null);
-  const [validRows, setValidRows] = useState<any[]>([]);
   const [confidenceLevel, setConfidenceLevel] = useState<number>(80);
 
-  const totalValue = validRows.reduce((sum, row) => sum + row.amount, 0) / 1000;
+  // Advice state
+  const [advice, setAdvice] = useState<Advice | null>(null);
+  const [loadingAdvice, setLoadingAdvice] = useState(false);
+
+  // Compute Portfolio totals (used elsewhere)
+  const totalValue =
+    validRows.reduce((sum, row) => sum + row.amount, 0) / 1000;
   const currentYear = new Date().getFullYear();
   const thisYearRows = validRows.filter(
     (r) => new Date(r.date).getFullYear() === currentYear
@@ -47,6 +58,31 @@ export default function Home() {
     lastYearTotal > 0
       ? ((thisYearTotal - lastYearTotal) / lastYearTotal) * 100
       : 0;
+
+  // Trigger advice fetch when forecastResult updates
+  useEffect(() => {
+    if (!forecastResult || validRows.length === 0) return;
+    setLoadingAdvice(true);
+
+    // Prepare payload
+    const payload = buildAdvicePayload(
+      validRows,
+      { points: forecastResult, summary: { accuracy: calculateForecastAccuracy(forecastResult) } },
+      confidenceLevel,
+      calculateForecastAccuracy(forecastResult)
+    );
+
+    // Fetch AI advice
+    fetch("/api/advice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then((res) => res.json())
+      .then((json: Advice) => setAdvice(json))
+      .catch((err) => console.error("Failed to fetch advice", err))
+      .finally(() => setLoadingAdvice(false));
+  }, [forecastResult, validRows, confidenceLevel]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex flex-col">
@@ -98,7 +134,8 @@ export default function Home() {
 
         {/* Sidebar */}
         <aside
-          className={`
+          className={
+            `
           fixed lg:relative top-0 left-0 h-full lg:h-auto
           w-80 lg:w-80 xl:w-96 
           transform ${
@@ -186,24 +223,15 @@ export default function Home() {
                 <FaRobot className="text-purple-600" />
                 AI Insights
               </h3>
-              <div className="space-y-3 text-xs lg:text-sm">
-                <div className="p-2 lg:p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                  <p className="text-gray-700 font-medium">
-                    Portfolio Optimization
-                  </p>
-                  <p className="text-gray-600 text-xs mt-1">
-                    Consider rebalancing allocation to emerging markets (+8%
-                    projected growth)
-                  </p>
-                </div>
-                <div className="p-2 lg:p-3 bg-amber-50 rounded-lg border-l-4 border-amber-400">
-                  <p className="text-gray-700 font-medium">Risk Alert</p>
-                  <p className="text-gray-600 text-xs mt-1">
-                    Monitor sector concentration in technology assets (currently
-                    34%)
-                  </p>
-                </div>
-              </div>
+              {loadingAdvice ? (
+                <p className="text-sm text-gray-500">Loading insights...</p>
+              ) : advice ? (
+                <AIInsights advice={advice} />
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Upload your CSV and generate forecast to see insights
+                </p>
+              )}
             </div>
 
             {/* Export & Reports */}
