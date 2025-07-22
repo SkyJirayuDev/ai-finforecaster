@@ -1,20 +1,32 @@
-// /src/pages/api/advice.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import OpenAI from "openai";
 
-// ติดตั้ง: npm install openai
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+/* ---------- OpenAI init ---------- */
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error("Missing OPENAI_API_KEY in environment");
+}
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+/* ---------- types ---------- */
+type ForecastPoint = {
+  ds: string;
+  actual: number;
+  yhat: number;
+  yhat_lower: number;
+  yhat_upper: number;
+};
 
 interface AdviceResponse {
   portfolioTip: string;
   riskAlert: string;
-  categoryTop: string;
-  categoryBottom: string;
-  nextSteps: string[];
+  seasonality?: string;
+  anomalies?: string;
+  scenarios?: { best: string; base: string; worst: string };
+  actions?: { horizon: string; action: string }[]; // optional
 }
 
+/* ---------- handler ---------- */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<AdviceResponse | { error: string }>
@@ -24,6 +36,7 @@ export default async function handler(
   }
 
   try {
+    /* ----- payload ----- */
     const p = req.body as {
       totalValue: number;
       growthRate: number;
@@ -39,57 +52,78 @@ export default async function handler(
       riskAssessment: string;
       marketTrend: string;
       categories: { name: string; amount: number; pctChange: number }[];
+      forecastPoints?: ForecastPoint[];
     };
 
-    // หาหมวดบนสุดและล่างสุด
+    /* ----- derive top / bottom category ----- */
     const sorted = [...p.categories].sort((a, b) => b.pctChange - a.pctChange);
     const top = sorted[0];
     const bottom = sorted[sorted.length - 1];
 
+    /* ----- last‑6‑points lines (if any) ----- */
+    const lines =
+      p.forecastPoints?.slice(-6).map(pt =>
+        `• ${pt.ds}: actual=${pt.actual.toFixed(0)}, forecast=${pt.yhat.toFixed(
+          0
+        )}, CI[${pt.yhat_lower.toFixed(0)}–${pt.yhat_upper.toFixed(0)}]`
+      ) ?? [];
+
+    /* ----- build prompt ----- */
     const prompt = `
-You are a top-notch financial AI assistant.
-Provide highly actionable insights based on the data below.
+You are a world‑class financial AI analyst. Based on the data below, write a JSON report.
 
-1) Portfolio Overview
-• Total Value: ${p.totalValue.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+DATA:
+• Total Portfolio Value: ${p.totalValue.toLocaleString(undefined, {
+      maximumFractionDigits: 1,
+    })}
 • YTD Growth: ${p.growthRate.toFixed(1)}%
-
-2) Key Metrics
 • Forecast Accuracy: ${p.forecastAccuracy.toFixed(1)}%
-• Risk Assessment: ${p.riskAssessment}
-• Confidence Level: ${p.confidenceLevel}%
-• Market Trend: ${p.marketTrend}
+• Confidence Level: ${p.confidenceLevel}% (±${(
+      100 - p.confidenceLevel
+    ).toFixed(1)}% swings)
+• Trend vs Hist Avg: ${p.trendPct.toFixed(1)}% (hist ${p.historicalAvg}, fc ${p.forecastAvg})
+• Peak: ${p.peakMonth} ${p.peakValue.toFixed(0)}, Trough: ${p.troughMonth} ${p.troughValue.toFixed(
+      0
+    )}
 
-3) Forecast Summary
-• Historical Avg: ${p.historicalAvg.toFixed(0)}
-• Forecast Avg:   ${p.forecastAvg.toFixed(0)}
-• Trend: ${p.trendPct.toFixed(1)}%
-• Peak: ${p.peakMonth} at ${p.peakValue.toFixed(0)}
-• Trough: ${p.troughMonth} at ${p.troughValue.toFixed(0)}
+CATEGORIES:
+${p.categories
+  .map(
+    c =>
+      `• ${c.name}: ${c.pctChange >= 0 ? "+" : ""}${c.pctChange.toFixed(1)}%`
+  )
+  .join("\n")}
 
-4) Category Performance
-• Top: ${top.name} (+${top.pctChange.toFixed(1)}%)
-• Bottom: ${bottom.name} (${bottom.pctChange.toFixed(1)}%)
+TIME SERIES (last 6):
+${lines.join("\n")}
 
-Generate:
-1) A one-sentence **Portfolio Optimization Tip** that mentions the top category and a suggested realloc percentage (e.g. “Allocate 5–10%…”).
-2) A one-sentence **Risk Alert** citing the market trend and confidence level (e.g. “With neutral trend and 90% confidence, expect ±X% swings…”).
-3) A one-sentence **Top Performer Insight** with month-over-month or YTD figures (e.g. “${top.name}…”).
-4) A one-sentence **Underperformer Insight** with a specific action for the bottom category.
-5) A **list of three bullet “Next Steps”**, each actionable and numbered, referencing actual figures.
+TASKS:
+1) Portfolio Optimization Tip (1 sentence).
+2) Risk Alert (1 sentence, include ± swings & trough).
+3) Seasonality Insight (1 sentence, last quarter MoM).
+4) Anomaly Detection (1 sentence).
+5) Scenario Planning (best/base/worst, 1‑2 sentences each).
+6) Actions: 3 numbered items with horizon (Immediate, 1‑month, Quarterly).
 
-Respond **strictly** as JSON in this format:
+Respond **only**:
+
 \`\`\`json
 {
   "portfolioTip": "...",
   "riskAlert": "...",
-  "categoryTop": "...",
-  "categoryBottom": "...",
-  "nextSteps": ["...","...","..."]
+  "seasonality": "...",
+  "anomalies": "...",
+  "scenarios": { "best": "...", "base": "...", "worst": "..." },
+  "actions": [
+    { "horizon": "Immediate", "action": "..." },
+    { "horizon": "1‑month", "action": "..." },
+    { "horizon": "Quarterly", "action": "..." }
+  ]
 }
 \`\`\`
 `.trim();
 
+    /* ----- OpenAI call ----- */
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -97,18 +131,22 @@ Respond **strictly** as JSON in this format:
         { role: "user", content: prompt },
       ],
       temperature: 0.7,
-      max_tokens: 350,
+      max_tokens: 500,
     });
 
-    const text = completion.choices[0].message?.content ?? "";
-    const match = text.match(/```json([\s\S]*?)```/);
-    const advice: AdviceResponse = match
-      ? JSON.parse(match[1].trim())
-      : JSON.parse(text.trim());
+    const raw = completion.choices[0].message?.content ?? "";
+    console.log("raw model output:", raw);
 
-    res.status(200).json(advice);
-  } catch (e: any) {
-    console.error(e);
-    res.status(500).json({ error: "Failed to generate insights." });
+    /* ----- parse json ----- */
+    let advice: AdviceResponse;
+    const m = raw.match(/```json([\s\S]*?)```/);
+    advice = m ? JSON.parse(m[1].trim()) : JSON.parse(raw.trim());
+
+    if (!advice.actions) advice.actions = []; // always array for frontend
+
+    return res.status(200).json(advice);
+  } catch (err: any) {
+    console.error("Advice API error:", err);
+    return res.status(500).json({ error: err.message || "Failed to generate insights." });
   }
 }
