@@ -18,15 +18,20 @@ export interface Scenario {
 export interface Advice {
   portfolioTip: string;
   riskAlert: string;
+  categoryInsights?: string;
   seasonality?: string;
   anomalies?: string;
   scenarios?: Scenario;
   actions?: { horizon: string; action: string }[]; // optional
+  topCategory?: string;
+  bottomCategory?: string;
+  topCategoriesList?: { name: string; pctChange: number }[];
 }
 
 /* ---------- component ---------- */
 const AIInsights: FC<{ advice: Advice }> = ({ advice }) => {
-  const actions = advice.actions ?? []; // always an array
+  const actions = advice.actions ?? [];
+  const topCategories = advice.topCategoriesList ?? [];
 
   return (
     <div className="space-y-4">
@@ -57,6 +62,34 @@ const AIInsights: FC<{ advice: Advice }> = ({ advice }) => {
           </p>
         </div>
       </div>
+
+      {/* ------------------ Category Performance (Upgrade) ------------------ */}
+      {(advice.categoryInsights || topCategories.length > 0) && (
+        <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-4 flex items-start gap-4 border border-white/20 hover:shadow-md transition-shadow">
+          <div className="p-3 bg-green-100 rounded-lg">
+            <TrendingUp className="w-6 h-6 text-green-600 stroke-current" />
+          </div>
+          <div className="flex-1">
+            <h4 className="font-semibold text-gray-800 mb-1">
+              Category Insights
+            </h4>
+            <p className="text-gray-700 text-sm leading-relaxed">
+              {advice.categoryInsights ||
+                `Top Category: ${advice.topCategory} | Bottom Category: ${advice.bottomCategory}`}
+            </p>
+            {topCategories.length > 0 && (
+              <ul className="list-disc list-inside mt-2 text-gray-700 text-sm leading-relaxed">
+                {topCategories.map((cat, idx) => (
+                  <li key={idx}>
+                    {cat.name} ({cat.pctChange >= 0 ? "+" : ""}
+                    {cat.pctChange.toFixed(1)}%)
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ------------------ Seasonality (optional) ------------------ */}
       {advice.seasonality && (
