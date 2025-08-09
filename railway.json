@@ -1,0 +1,11 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "services": [
+    {
+      "name": "api",
+      "rootDirectory": "forecast-api",
+      "build": { "builder": "docker" },
+      "deploy": { "healthcheckPath": "/health" }
+    }
+  ]
+}
