@@ -8,7 +8,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-/* ---------- types ---------- */
+/* types */
 export interface Scenario {
   best: string;
   base: string;
@@ -28,14 +28,14 @@ export interface Advice {
   topCategoriesList?: { name: string; pctChange: number }[];
 }
 
-/* ---------- component ---------- */
+/* component */
 const AIInsights: FC<{ advice: Advice }> = ({ advice }) => {
   const actions = advice.actions ?? [];
   const topCategories = advice.topCategoriesList ?? [];
 
   return (
     <div className="space-y-4">
-      {/* ------------------ Portfolio Optimization ------------------ */}
+      {/* Portfolio Optimization */}
       <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-4 flex items-start gap-4 border border-white/20 hover:shadow-md transition-shadow">
         <div className="p-3 bg-blue-100 rounded-lg">
           <TrendingUp className="w-6 h-6 text-blue-600 stroke-current" />
@@ -50,7 +50,7 @@ const AIInsights: FC<{ advice: Advice }> = ({ advice }) => {
         </div>
       </div>
 
-      {/* ------------------ Risk Alert ------------------ */}
+      {/* Risk Alert */}
       <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-4 flex items-start gap-4 border border-white/20 hover:shadow-md transition-shadow">
         <div className="p-3 bg-yellow-100 rounded-lg">
           <AlertTriangle className="w-6 h-6 text-amber-600 stroke-current" />
@@ -63,7 +63,7 @@ const AIInsights: FC<{ advice: Advice }> = ({ advice }) => {
         </div>
       </div>
 
-      {/* ------------------ Category Performance (Upgrade) ------------------ */}
+      {/* Category Performance (Upgrade) */}
       {(advice.categoryInsights || topCategories.length > 0) && (
         <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-4 flex items-start gap-4 border border-white/20 hover:shadow-md transition-shadow">
           <div className="p-3 bg-green-100 rounded-lg">
@@ -91,7 +91,7 @@ const AIInsights: FC<{ advice: Advice }> = ({ advice }) => {
         </div>
       )}
 
-      {/* ------------------ Seasonality (optional) ------------------ */}
+      {/* Seasonality (optional) */}
       {advice.seasonality && (
         <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-4 flex items-start gap-4 border border-white/20 hover:shadow-md transition-shadow">
           <div className="p-3 bg-green-100 rounded-lg">
@@ -108,7 +108,7 @@ const AIInsights: FC<{ advice: Advice }> = ({ advice }) => {
         </div>
       )}
 
-      {/* ------------------ Anomaly (optional) ------------------ */}
+      {/* Anomaly (optional) */}
       {advice.anomalies && (
         <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-4 flex items-start gap-4 border border-white/20 hover:shadow-md transition-shadow">
           <div className="p-3 bg-red-100 rounded-lg">
@@ -125,7 +125,7 @@ const AIInsights: FC<{ advice: Advice }> = ({ advice }) => {
         </div>
       )}
 
-      {/* ------------------ Scenario Planning (optional) ------------------ */}
+      {/* Scenario Planning (optional) */}
       {advice.scenarios && (
         <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-4 flex items-start gap-4 border border-white/20 hover:shadow-md transition-shadow">
           <div className="p-3 bg-teal-100 rounded-lg">
@@ -150,7 +150,7 @@ const AIInsights: FC<{ advice: Advice }> = ({ advice }) => {
         </div>
       )}
 
-      {/* ------------------ Recommended Actions ------------------ */}
+      {/* Recommended Actions */}
       <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-4 flex items-start gap-4 border border-white/20 hover:shadow-md transition-shadow">
         <div className="p-3 bg-purple-100 rounded-lg">
           <CheckCircle className="w-6 h-6 text-purple-600 stroke-current" />
