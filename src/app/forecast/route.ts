@@ -4,11 +4,12 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const res = await fetch(process.env.FORECAST_API_URL!, {
+    const base = process.env.FORECAST_API_URL!;
+    const url = `${base.replace(/\/$/, "")}/forecast`; 
+
+    const res = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
 
