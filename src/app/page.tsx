@@ -3,14 +3,10 @@
 import {
   FaUser,
   FaCog,
-  FaUpload,
   FaChartLine,
-  FaDownload,
   FaRobot,
-  FaArrowUp,
   FaBell,
   FaSearch,
-  FaFileAlt,
   FaShieldAlt,
   FaBars,
   FaTimes,
@@ -28,6 +24,7 @@ import {
 } from "@/lib/forecastMetrics";
 import { buildAdvicePayload } from "@/lib/adviceUtils";
 import AIInsights, { Advice } from "@/components/AIInsights";
+import ReportsExport from "@/components/ReportsExport";
 
 export default function Home() {
   // Sidebar toggle
@@ -43,15 +40,21 @@ export default function Home() {
   const [loadingAdvice, setLoadingAdvice] = useState(false);
 
   // Compute Portfolio totals (used elsewhere)
-  const totalValue =
-    validRows.reduce((sum, row) => sum + row.amount, 0) / 1000;
-  const currentYear = new Date().getFullYear();
+  const totalValue = validRows.reduce((sum, row) => sum + row.amount, 0) / 1000;
+  const years = Array.from(
+    new Set(validRows.map((r) => new Date(r.date).getFullYear()))
+  ).sort((a, b) => a - b);
+
+  const latestYear = years[years.length - 1] ?? new Date().getFullYear();
+  const prevYear = years.length > 1 ? years[years.length - 2] : latestYear - 1;
+
   const thisYearRows = validRows.filter(
-    (r) => new Date(r.date).getFullYear() === currentYear
+    (r) => new Date(r.date).getFullYear() === latestYear
   );
   const lastYearRows = validRows.filter(
-    (r) => new Date(r.date).getFullYear() === currentYear - 1
+    (r) => new Date(r.date).getFullYear() === prevYear
   );
+
   const thisYearTotal = thisYearRows.reduce((sum, row) => sum + row.amount, 0);
   const lastYearTotal = lastYearRows.reduce((sum, row) => sum + row.amount, 0);
   const growthRate =
@@ -67,7 +70,10 @@ export default function Home() {
     // Prepare payload
     const payload = buildAdvicePayload(
       validRows,
-      { points: forecastResult, summary: { accuracy: calculateForecastAccuracy(forecastResult) } },
+      {
+        points: forecastResult,
+        summary: { accuracy: calculateForecastAccuracy(forecastResult) },
+      },
       confidenceLevel,
       calculateForecastAccuracy(forecastResult)
     );
@@ -83,6 +89,119 @@ export default function Home() {
       .catch((err) => console.error("Failed to fetch advice", err))
       .finally(() => setLoadingAdvice(false));
   }, [forecastResult, validRows, confidenceLevel]);
+
+  // Report data builders
+  type AdviceLike = {
+    portfolioTip?: string;
+    riskAlert?: string;
+    categoryInsights?: string;
+    topCategory?: string;
+    bottomCategory?: string;
+    topCategoriesList?: { name: string; pctChange: number }[];
+    seasonality?: string;
+    anomalies?: string;
+    scenarios?: { best?: string; base?: string; worst?: string };
+    actions?: { horizon?: string; action?: string }[];
+  };
+
+  function toReportText(ad: AdviceLike): string {
+    const parts: string[] = [];
+
+    if (ad.portfolioTip) {
+      parts.push(`Portfolio Optimization:\n${ad.portfolioTip}`);
+    }
+
+    if (ad.riskAlert) {
+      parts.push(`Risk Alert:\n${ad.riskAlert}`);
+    }
+
+    if (
+      ad.categoryInsights ||
+      ad.topCategory ||
+      ad.bottomCategory ||
+      (ad.topCategoriesList?.length ?? 0) > 0
+    ) {
+      const lines: string[] = [];
+      if (ad.categoryInsights) lines.push(ad.categoryInsights);
+      if (ad.topCategory || ad.bottomCategory) {
+        lines.push(`Top Category: ${ad.topCategory ?? "-"}`);
+        lines.push(`Bottom Category: ${ad.bottomCategory ?? "-"}`);
+      }
+      if (ad.topCategoriesList?.length) {
+        lines.push(
+          "Top categories:",
+          ...ad.topCategoriesList.map(
+            (c) =>
+              `- ${c.name} (${c.pctChange >= 0 ? "+" : ""}${c.pctChange.toFixed(
+                1
+              )}%)`
+          )
+        );
+      }
+      parts.push(`Category Insights:\n${lines.join("\n")}`);
+    }
+
+    if (ad.seasonality) {
+      parts.push(`Seasonality Insight:\n${ad.seasonality}`);
+    }
+
+    if (ad.anomalies) {
+      parts.push(`Anomaly Detection:\n${ad.anomalies}`);
+    }
+
+    if (
+      ad.scenarios &&
+      (ad.scenarios.best || ad.scenarios.base || ad.scenarios.worst)
+    ) {
+      parts.push(
+        `Scenario Planning:\n` +
+          `${ad.scenarios.best ? `- Best: ${ad.scenarios.best}\n` : ""}` +
+          `${ad.scenarios.base ? `- Base: ${ad.scenarios.base}\n` : ""}` +
+          `${ad.scenarios.worst ? `- Worst: ${ad.scenarios.worst}` : ""}`
+      );
+    }
+
+    if (ad.actions?.length) {
+      parts.push(
+        "Recommended Actions:\n" +
+          ad.actions
+            .map(
+              (act, i) =>
+                `${i + 1}. ${act.horizon ?? "Action"}: ${act.action ?? "-"}`
+            )
+            .join("\n")
+      );
+    }
+
+    return parts.join("\n\n");
+  }
+
+  const aiInsightsText = advice
+    ? toReportText(advice as unknown as AdviceLike)
+    : "No insights yet.";
+
+  const portfolioOverviewData = {
+    "Total value k": totalValue.toFixed(2),
+    [`This year total (${latestYear})`]: thisYearTotal.toFixed(2),
+    [`Last year total (${prevYear})`]: lastYearTotal.toFixed(2),
+    "Growth rate percent": growthRate.toFixed(2),
+  };
+
+  const keyMetricsData = {
+    "Forecast accuracy":
+      forecastResult && forecastResult.length > 0
+        ? `${calculateForecastAccuracy(forecastResult).toFixed(2)}%`
+        : "0%",
+    "Confidence level": getConfidenceLabel(confidenceLevel),
+    "Risk level":
+      forecastResult && forecastResult.length > 0
+        ? calculateRiskAssessment(forecastResult)
+        : "Moderate",
+    "Market trend":
+      forecastResult && forecastResult.length > 0
+        ? calculateMarketTrend(forecastResult)
+        : "Neutral",
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex flex-col">
@@ -134,8 +253,7 @@ export default function Home() {
 
         {/* Sidebar */}
         <aside
-          className={
-            `
+          className={`
           fixed lg:relative top-0 left-0 h-full lg:h-auto
           w-80 lg:w-80 xl:w-96 
           transform ${
@@ -239,41 +357,12 @@ export default function Home() {
               <h3 className="text-base lg:text-lg font-semibold text-gray-800 mb-4">
                 Reports & Export
               </h3>
-              <div className="space-y-3">
-                <button className="w-full flex items-center justify-between p-2 lg:p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition text-left">
-                  <div>
-                    <p className="text-xs lg:text-sm font-medium text-gray-800">
-                      Comprehensive Report
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Full analysis with recommendations
-                    </p>
-                  </div>
-                  <FaDownload className="text-gray-400 text-sm" />
-                </button>
-                <button className="w-full flex items-center justify-between p-2 lg:p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition text-left">
-                  <div>
-                    <p className="text-xs lg:text-sm font-medium text-gray-800">
-                      Data Export
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      CSV, Excel, PDF formats
-                    </p>
-                  </div>
-                  <FaDownload className="text-gray-400 text-sm" />
-                </button>
-                <button className="w-full flex items-center justify-between p-2 lg:p-3 bg-gradient-to-r from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 rounded-lg transition text-left border border-blue-200">
-                  <div>
-                    <p className="text-xs lg:text-sm font-medium text-blue-800">
-                      Executive Summary
-                    </p>
-                    <p className="text-xs text-blue-600">
-                      Key insights for stakeholders
-                    </p>
-                  </div>
-                  <FaDownload className="text-blue-400 text-sm" />
-                </button>
-              </div>
+              <ReportsExport
+                portfolioOverview={portfolioOverviewData}
+                forecastData={forecastResult ?? []}
+                keyMetrics={keyMetricsData}
+                aiInsights={aiInsightsText}
+              />
             </div>
           </div>
         </main>

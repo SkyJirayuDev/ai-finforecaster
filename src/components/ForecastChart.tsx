@@ -188,7 +188,7 @@ export default function ForecastChart({
       </div>
 
       {/* Chart */}
-      <div className="relative w-full h-[500px]">
+      <div id="forecastChart" className="relative w-full h-[500px]">
         {chartData ? (
           <Line
             data={chartData}
