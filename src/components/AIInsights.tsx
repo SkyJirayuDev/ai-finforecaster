@@ -8,7 +8,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-/* types */
+// types 
 export interface Scenario {
   best: string;
   base: string;
@@ -28,7 +28,7 @@ export interface Advice {
   topCategoriesList?: { name: string; pctChange: number }[];
 }
 
-/* component */
+// component 
 const AIInsights: FC<{ advice: Advice }> = ({ advice }) => {
   const actions = advice.actions ?? [];
   const topCategories = advice.topCategoriesList ?? [];

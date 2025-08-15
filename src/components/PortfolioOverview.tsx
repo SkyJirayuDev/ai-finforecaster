@@ -22,8 +22,9 @@ export default function PortfolioOverview({
     );
     const recentDate = new Date(recentTimestamp);
     const currentYear = recentDate.getFullYear();
-    const currentMonthIndex = recentDate.getMonth(); // 0 = ม.ค.
+    const currentMonthIndex = recentDate.getMonth(); 
 
+    // Calculate YTD growth
     const currentYTD = validRows
       .filter((r) => {
         const d = new Date(r.date);
@@ -34,6 +35,7 @@ export default function PortfolioOverview({
       })
       .reduce((sum: number, r: CSVRow) => sum + r.amount, 0);
 
+    // Calculate last year's YTD
     const lastYTD = validRows
       .filter((r) => {
         const d = new Date(r.date);

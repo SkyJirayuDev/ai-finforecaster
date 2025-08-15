@@ -1,7 +1,5 @@
-// src/lib/dataUtils.ts
 import { CSVRow } from "@/components/CSVUploader"
 
-// 1) Portfolio Overview
 export function computePortfolioOverview(rows: CSVRow[]) {
   const total = rows.reduce((sum, r) => sum + r.amount, 0)
   const recentTs = Math.max(...rows.map(r => new Date(r.date).getTime()))
@@ -25,9 +23,8 @@ export function computePortfolioOverview(rows: CSVRow[]) {
   return { totalValue: total / 1000, growthRate: growth }
 }
 
-// 2) Forecast statistics
+// Forecast Stats
 export function computeForecastStats(forecast: any) {
-  // forecast.points: [{ ds, actual?, yhat }, ...]
   const actuals = forecast.points.map((p: any) => p.actual ?? p.yhat)
   const forecasts = forecast.points.map((p: any) => p.yhat)
 
@@ -43,7 +40,7 @@ export function computeForecastStats(forecast: any) {
   return { actualAvg, forecastAvg, trendPct }
 }
 
-// 3) Peaks & Troughs
+// Peaks and Troughs
 export function computePeaksAndTroughs(forecast: any) {
   const points = forecast.points
   let maxPoint = points[0], minPoint = points[0]
@@ -59,7 +56,7 @@ export function computePeaksAndTroughs(forecast: any) {
   }
 }
 
-// 4) Category Breakdown
+// Category Breakdown
 export function computeCategoryBreakdown(rows: CSVRow[]) {
   const recentTs = Math.max(...rows.map(r => new Date(r.date).getTime()))
   const recentDate = new Date(recentTs)

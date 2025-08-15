@@ -5,6 +5,7 @@ export function calculateForecastAccuracy(result: any[] | null): number {
   );
   if (withActual.length === 0) return 0;
 
+  // Calculate Mean Absolute Percentage Error (MAPE)
   const mape =
     withActual.reduce((sum, r) => {
       const error = Math.abs((r.actual - r.yhat) / r.actual);
@@ -14,6 +15,7 @@ export function calculateForecastAccuracy(result: any[] | null): number {
   return Math.max(0, Math.min(100, 100 - mape * 100));
 }
 
+// Calculate risk assessment based on forecast result
 export function calculateRiskAssessment(
   result: any[] | null
 ): "Low" | "Moderate" | "High" {
@@ -31,6 +33,7 @@ export function calculateRiskAssessment(
   return "Moderate";
 }
 
+// Calculate market trend based on forecast result
 export function calculateMarketTrend(
   result: any[] | null
 ): "Bullish" | "Bearish" | "Neutral" {
@@ -50,6 +53,7 @@ export function calculateMarketTrend(
   return "Neutral";
 }
 
+// Get confidence label based on level
 export function getConfidenceLabel(level: number): string {
   if (level >= 90) return `High (${level}%)`;
   if (level >= 70) return `Moderate (${level}%)`;

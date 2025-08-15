@@ -27,18 +27,21 @@ export default function KeyMetrics({
     return <FaMinus size={10} className="text-gray-400 dark:text-gray-300" />;
   };
 
+  // Helper functions to determine colors based on values
   const getTrendColor = () => {
     if (trendLabel === "Bullish") return "text-green-600 dark:text-green-300";
     if (trendLabel === "Bearish") return "text-rose-600 dark:text-rose-400";
     return "text-gray-600 dark:text-gray-300";
   };
 
+  // Helper functions to determine risk and confidence colors
   const getRiskColor = () => {
     if (riskLevel === "Low") return "text-emerald-600 dark:text-emerald-400";
     if (riskLevel === "High") return "text-rose-600 dark:text-rose-400";
     return "text-blue-600 dark:text-blue-400";
   };
 
+  // Helper function to get confidence color
   const getConfidenceColor = () => {
     const level = confidenceLevel?.toLowerCase();
     if (level.startsWith("high")) return "text-green-600 dark:text-green-400";

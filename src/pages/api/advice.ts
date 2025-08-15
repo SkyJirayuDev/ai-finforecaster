@@ -1,14 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import OpenAI from "openai";
 
-/* ---------- OpenAI init ---------- */
+// OpenAI init
 if (!process.env.OPENAI_API_KEY) {
   throw new Error("Missing OPENAI_API_KEY in environment");
 }
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/* ---------- types ---------- */
+// types
 type ForecastPoint = {
   ds: string;
   actual: number;
@@ -30,7 +30,7 @@ interface AdviceResponse {
   topCategoriesList?: { name: string; pctChange: number }[];
 }
 
-/* ---------- handler ---------- */
+// handler 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<AdviceResponse | { error: string }>
@@ -76,7 +76,7 @@ export default async function handler(
         ? `Notable transactions: ${p.descriptions.slice(0, 5).join(", ")}`
         : "No transaction descriptions available.";
 
-    /* ---------- Enhanced Prompt ---------- */
+    // Enhanced Prompt 
     const prompt = `
 You are a senior financial AI analyst. Analyze the portfolio and explain category performance by referencing actual category names and transaction descriptions.
 

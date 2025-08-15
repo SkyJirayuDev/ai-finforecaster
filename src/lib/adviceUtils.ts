@@ -1,4 +1,3 @@
-// src/lib/adviceUtils.ts
 import { CSVRow } from "@/components/CSVUploader";
 import {
   computePortfolioOverview,
@@ -7,10 +6,6 @@ import {
   computeCategoryBreakdown,
 } from "./dataUtils";
 
-/**
- * สร้าง payload ข้อมูลการเงินที่สรุปจาก CSV และผล Forecast
- * เพื่อนำไปใช้สร้าง AI Insights ผ่าน API advice.ts
- */
 export function buildAdvicePayload(
   rows: CSVRow[],
   forecast: any,
@@ -23,6 +18,7 @@ export function buildAdvicePayload(
     computePeaksAndTroughs(forecast);
   const categories = computeCategoryBreakdown(rows);
 
+  // Calculate risk assessment and market trend
   const riskAssessment =
     confidenceLevel > 85 ? "Low" : confidenceLevel < 70 ? "High" : "Moderate";
   const marketTrend =
@@ -42,14 +38,11 @@ export function buildAdvicePayload(
     confidenceLevel,
     riskAssessment,
     marketTrend,
-    categories, // เก็บข้อมูล categories ให้ API /advice ใช้ต่อ
+    categories, 
   };
 }
 
-/**
- * ฟังก์ชันเสริม: ใช้เลือก Top และ Bottom Category
- * (สามารถใช้เพื่อสร้างข้อความ Insight แบบกำหนดเอง)
- */
+// Extract top and bottom categories for advice
 export function extractCategoryPerformance(
   categories: { name: string; amount: number; pctChange: number }[]
 ): { topCategory: string; bottomCategory: string } {
@@ -57,10 +50,12 @@ export function extractCategoryPerformance(
     return { topCategory: "No data", bottomCategory: "No data" };
   }
 
+  // Sort categories by percentage change
   const sorted = [...categories].sort((a, b) => b.pctChange - a.pctChange);
   const top = sorted[0];
   const bottom = sorted[sorted.length - 1];
 
+  // Return formatted strings for top and bottom categories
   return {
     topCategory: top
       ? `${top.name} (+${top.pctChange.toFixed(1)}%)`

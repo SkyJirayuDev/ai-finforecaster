@@ -4,21 +4,22 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import html2canvas from "html2canvas";
 
-// ให้ jsPDF ใช้ lastAutoTable ได้ (จาก jspdf-autotable)
+// Type definitions for jsPDF with autoTable
 type AutoTableDoc = jsPDF & { lastAutoTable?: { finalY: number } };
 
 type Dict = Record<string, any>;
 interface ReportsExportProps {
   portfolioOverview: Dict;
-  forecastData: any[];      // points array
+  forecastData: any[];      
   keyMetrics: Dict;
   aiInsights: string;
 }
 
-// ---------- helpers ----------
+// helpers 
 const pick = (obj: any, keys: string[]) =>
   keys.find((k) => obj && Object.prototype.hasOwnProperty.call(obj, k));
 
+// Clean up values to avoid null/undefined issues in CSV
 const clean = (v: any) => {
   if (v === null || v === undefined) return "";
   const s = String(v);
@@ -27,6 +28,7 @@ const clean = (v: any) => {
 
 type Row = { date: string; forecast: string; actual: string; lower?: string; upper?: string };
 
+// Normalize forecast rows to a consistent format
 function normalizeForecastRows(rows: any[]): Row[] {
   return (rows || []).map((r) => {
     const dk = pick(r, ["date", "ds", "Date", "timestamp"]);
@@ -45,6 +47,7 @@ function normalizeForecastRows(rows: any[]): Row[] {
   });
 }
 
+// Download CSV utility
 function downloadCSV(filename: string, content: string) {
   const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -56,8 +59,8 @@ function downloadCSV(filename: string, content: string) {
   a.remove();
   URL.revokeObjectURL(url);
 }
-// --------------------------------
 
+// Main component
 const ReportsExport: React.FC<ReportsExportProps> = ({
   portfolioOverview,
   forecastData,
@@ -122,7 +125,7 @@ const ReportsExport: React.FC<ReportsExportProps> = ({
       headStyles: { fillColor: [33, 150, 243] },
     });
 
-    // Chart snapshot (ถ้ามี)
+    // Forecast Chart
     const chartEl = document.getElementById("forecastChart");
     let yAfterImage: number | null = null;
 
@@ -142,7 +145,7 @@ const ReportsExport: React.FC<ReportsExportProps> = ({
       doc.text("Financial Forecast Analysis", margin, 50);
       doc.addImage(img, "PNG", margin, 70, pdfWidth, pdfHeight);
 
-      // นับ historical vs forecast อย่างถูกต้อง
+      // Data points
       const historicalCount = normRows.filter((r) => r.actual !== "").length;
       const forecastCount = normRows.length - historicalCount;
 
@@ -155,7 +158,7 @@ const ReportsExport: React.FC<ReportsExportProps> = ({
       );
     }
 
-    // Forecast table — column แบบ dynamic (มี CI เมื่อมีข้อมูล)
+    // Forecast Data Table
     autoTable(doc, {
       startY: (yAfterImage ? yAfterImage + 20 : (doc.lastAutoTable?.finalY ?? 140) + 20),
       head: [hasCI ? ["Date", "Forecast", "Lower", "Upper", "Actual"] : ["Date", "Forecast", "Actual"]],
@@ -188,7 +191,6 @@ const ReportsExport: React.FC<ReportsExportProps> = ({
     doc.save(`report_${dateStamp}.pdf`);
   };
 
-  // ปุ่ม 2 อันในการ์ด Reports & Export
   return (
     <div className="space-y-3">
       {/* PDF Export */}

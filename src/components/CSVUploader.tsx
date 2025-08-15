@@ -25,11 +25,13 @@ export interface CSVRow {
   [key: string]: any;
 }
 
+// Validation result type
 interface ValidationResult {
   validRows: CSVRow[];
   invalidRows: { row: any; errors: string[]; index: number }[];
 }
 
+// Validate CSV rows
 function validateRows(rows: any[]): ValidationResult {
   const validRows: CSVRow[] = [];
   const invalidRows: { row: any; errors: string[]; index: number }[] = [];
@@ -77,6 +79,7 @@ function validateRows(rows: any[]): ValidationResult {
   return { validRows, invalidRows };
 }
 
+// CSV Uploader component
 export default function CSVUploader({
   forecastResult,
   setForecastResult,

@@ -56,6 +56,7 @@ export default function ForecastChart({
     const actualValues = actualData.map((pt) => pt.actual!);
     const forecastValues = forecastData.map((pt) => pt.yhat);
 
+    // Calculate stats
     const stats = {
       actualAvg:
         actualValues.length > 0
@@ -76,6 +77,7 @@ export default function ForecastChart({
           : 0,
     };
 
+    // Create chart data
     const chartData = {
       labels: allData.map((pt) => pt.ds),
       datasets: [
@@ -122,7 +124,7 @@ export default function ForecastChart({
           fill: false,
           tension: 0.2,
         },
-      ].filter((dataset) => dataset.label !== ""), // ซ่อน dataset ที่ไม่มี label
+      ].filter((dataset) => dataset.label !== ""), 
     };
 
     return { chartData, stats };
@@ -200,7 +202,7 @@ export default function ForecastChart({
                   display: true,
                   position: "top",
                   labels: {
-                    filter: (item) => item.text !== "", // ซ่อน empty labels
+                    filter: (item) => item.text !== "", 
                     usePointStyle: true,
                     pointStyle: "circle",
                   },
@@ -214,11 +216,11 @@ export default function ForecastChart({
                         context.datasetIndex === 2 ||
                         context.datasetIndex === 3
                       )
-                        return ""; // ใช้ "" แทน null
+                        return ""; 
 
                       const label = context.dataset.label || "";
                       const value = context.parsed.y;
-                      if (value === null || value === undefined) return ""; // ป้องกัน null/undefined
+                      if (value === null || value === undefined) return ""; 
 
                       return `${label}: ${value.toLocaleString("en-US", {
                         minimumFractionDigits: 0,
